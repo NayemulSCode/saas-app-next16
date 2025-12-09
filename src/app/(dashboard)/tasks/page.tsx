@@ -15,22 +15,17 @@ interface TasksPageProps {
     project?: string;
   }>;
 }
+
 export default async function TasksPage(props: TasksPageProps) {
   const searchParams = await props.searchParams;
   const session = await getServerSession(authOptions);
   const db = await getDb();
-  // Fetch tasks and projects
   // @ts-ignore
   const userId = new ObjectId(session!.user.id);
 
   // Build filter query - FIXED
   const filter: any = { userId };
-  console.log("🚀 ~ TasksPage ~ filter:", filter);
-  const [tasks, projects] = await Promise.all([
-    db.collection("tasks").find(filter).sort({ createdAt: -1 }).toArray(),
-    db.collection("projects").find({ userId }).toArray(),
-  ]);
-  console.log("🚀 ~ TasksPage ~ tasks:", tasks);
+
   if (searchParams.status && searchParams.status !== "all") {
     filter.status = searchParams.status;
   }
@@ -47,6 +42,12 @@ export default async function TasksPage(props: TasksPageProps) {
     filter.projectId = new ObjectId(searchParams.project);
   }
 
+  // Fetch tasks and projects
+  const [tasks, projects] = await Promise.all([
+    db.collection("tasks").find(filter).sort({ createdAt: -1 }).toArray(),
+    db.collection("projects").find({ userId }).toArray(),
+  ]);
+
   // Serialize ObjectIds for client components
   const serializedTasks = tasks.map((task) => ({
     ...task,
@@ -56,6 +57,7 @@ export default async function TasksPage(props: TasksPageProps) {
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt?.toISOString(),
   }));
+
   const serializedProjects = projects.map((project) => ({
     ...project,
     _id: project._id.toString(),
@@ -71,11 +73,12 @@ export default async function TasksPage(props: TasksPageProps) {
             Manage and track your tasks with AI assistance
           </p>
         </div>
-        {/* create task */}
-        <CreateTaskButton projects={[]} />
+        {/* @ts-ignore */}
+        <CreateTaskButton projects={serializedProjects} />
       </div>
       {/* @ts-ignore */}
       <TaskFilters projects={serializedProjects} />
+
       <Suspense fallback={<TasksSkeleton />}>
         {/* @ts-ignore */}
         <TaskList tasks={serializedTasks} projects={serializedProjects} />

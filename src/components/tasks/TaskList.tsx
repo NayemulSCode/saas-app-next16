@@ -22,6 +22,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import EditTaskDialog from "./EditTaskDialog";
 interface Task {
   _id: string;
   title: string;
@@ -106,6 +107,32 @@ export default function TaskList({ tasks, projects }: TaskListProps) {
       toast.error("Failed to update task");
     }
   };
+  const handleDuplicate = async (task: Task) => {
+    setDuplicatingId(task._id);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: `${task.title} (Copy)`,
+          description: task.description,
+          projectId: task.projectId || null,
+          status: task.status,
+          priority: task.priority,
+          aiSuggestions: task.aiSuggestions || null,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to duplicate task");
+
+      toast.success("Task duplicated successfully");
+      router.refresh();
+    } catch (error) {
+      toast.error("Failed to duplicate task");
+    } finally {
+      setDuplicatingId(null);
+    }
+  };
+
   const handleDelete = async (taskId: string) => {
     setDeletingId(taskId);
     try {
@@ -249,7 +276,7 @@ export default function TaskList({ tasks, projects }: TaskListProps) {
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          //   onClick={() => handleDuplicate(task)}
+                          onClick={() => handleDuplicate(task)}
                           disabled={isDuplicating}
                         >
                           <Copy className="h-4 w-4 mr-2" />
@@ -273,6 +300,15 @@ export default function TaskList({ tasks, projects }: TaskListProps) {
           })}
         </div>
       </div>
+      {/* Edit Dialog */}
+      {editingTask && (
+        <EditTaskDialog
+          task={editingTask}
+          projects={projects}
+          open={!!editingTask}
+          onOpenChange={(open: boolean) => !open && setEditingTask(null)}
+        />
+      )}
     </>
   );
 }

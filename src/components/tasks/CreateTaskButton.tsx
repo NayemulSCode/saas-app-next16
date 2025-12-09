@@ -49,6 +49,32 @@ export default function CreateTaskButton({ projects }: CreateTaskButtonProps) {
       toast.error("Please enter a task title first");
       return;
     }
+    setIsLoadingAI(true);
+    try {
+      const res = await fetch("/api/ai/suggestions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          taskTitle: title,
+          taskDescription: description,
+        }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to get suggestions");
+      }
+      const data = await res.json();
+      setAiSuggestions(data.suggestions);
+      // Auto-apply AI suggestions
+      if (data.suggestions.priority) {
+        setPriority(data.suggestions.priority);
+      }
+      toast.success("AI Suggestions Ready");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to get AI suggestions");
+    } finally {
+      setIsLoadingAI(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
